@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#080c14"/>
+<title>TRANSFORM — تحول الجسم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--bg2:#0d1320;--bg3:#121926;
+  --green:#00ff87;--blue:#00c8ff;--red:#ff3d5a;--orange:#ff8c00;--purple:#a855f7;
+  --text:#e8f0fe;--muted:#4a5568;--card:#111827;--border:#1e2d40;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;direction:rtl;min-height:100vh;overflow-x:hidden}
+
+/* NOISE TEXTURE */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px var(--green)}50%{box-shadow:0 0 40px var(--green),0 0 80px var(--green)30}}
+@keyframes countUp{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+
+.fade{animation:fadeUp .4s ease both}
+
+/* ── HEADER ── */
+header{
+  position:relative;padding:32px 20px 24px;text-align:center;
+  background:linear-gradient(180deg,#0a1628 0%,var(--bg) 100%);
+  border-bottom:1px solid var(--border);overflow:hidden;
+}
+header::after{
+  content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:400px;height:160px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(0,255,135,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.app-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,255,135,.08);border:1px solid rgba(0,255,135,.2);
+  border-radius:20px;padding:4px 14px;font-size:11px;color:var(--green);
+  font-weight:700;letter-spacing:1px;margin-bottom:14px;
+}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;line-height:1;
+  background:linear-gradient(135deg,#fff 30%,var(--green));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+header p{color:#6b7fa3;font-size:13px;margin-top:6px}
+
+/* STATS BAR */
+.stats-bar{
+  display:flex;justify-content:center;gap:0;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  overflow-x:auto;scrollbar-width:none;
+}
+.stats-bar::-webkit-scrollbar{display:none}
+.stat-item{
+  flex:1;min-width:80px;padding:14px 8px;text-align:center;
+  border-left:1px solid var(--border);position:relative;
+}
+.stat-item:last-child{border-left:none}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green)}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* WEEK SELECTOR */
+.week-nav{
+  padding:16px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.week-nav::-webkit-scrollbar{display:none}
+.day-pill{
+  flex-shrink:0;padding:10px 16px;border-radius:50px;
+  background:var(--bg3);border:1px solid var(--border);
+  font-size:12px;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:all .2s;font-family:'Cairo',sans-serif;
+  text-align:center;min-width:70px;
+}
+.day-pill.active{background:var(--green);color:#000;border-color:var(--green);
+  box-shadow:0 0 20px rgba(0,255,135,.3);}
+.day-pill.rest{border-style:dashed;color:#3d4f6a}
+.day-pill .day-name{font-size:13px}
+.day-pill .day-type{font-size:9px;margin-top:2px;opacity:.7}
+
+/* TABS */
+#tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border)}
+.tab-btn{
+  flex:1;padding:13px 4px;font-size:11px;background:transparent;
+  border:none;border-bottom:2px solid transparent;color:var(--muted);
+  cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s;line-height:1.5;
+}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green);font-weight:700}
+
+/* CONTENT */
+#content{padding:16px;max-width:640px;margin:0 auto;position:relative;z-index:1}
+
+/* DAY HEADER CARD */
+.day-hero{
+  background:linear-gradient(135deg,var(--card) 0%,#0d1f35 100%);
+  border:1px solid var(--border);border-radius:20px;padding:20px;
+  margin-bottom:16px;position:relative;overflow:hidden;
+}
+.day-hero::before{
+  content:'';position:absolute;top:-30px;left:-30px;width:120px;height:120px;
+  border-radius:50%;opacity:.06;
+}
+.day-hero-top{display:flex;align-items:center;justify-content:space-between}
+.day-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px}
+.day-badge{
+  padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;
+  font-family:'Cairo',sans-serif;letter-spacing:.5px;
+}
+.day-muscles{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.muscle-tag{
+  background:rgba(0,255,135,.08);border:1px solid rgba(0,255,135,.15);
+  color:var(--green);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;
+}
+.day-stats{display:flex;gap:12px;margin-top:14px}
+.d-stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;
+  padding:8px 14px;text-align:center;flex:1}
+.d-stat-n{font-size:18px;font-weight:900;color:var(--green)}
+.d-stat-l{font-size:10px;color:var(--muted)}
+
+/* EXERCISE CARD */
+.ex-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  margin-bottom:12px;overflow:hidden;cursor:pointer;
+  transition:transform .2s,border-color .2s;
+}
+.ex-card:hover{transform:translateY(-2px);border-color:var(--green)}
+.ex-card.expanded{border-color:var(--green)}
+.ex-header{display:flex;align-items:center;gap:14px;padding:16px}
+.ex-num{
+  width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;
+  color:#000;flex-shrink:0;
+}
+.ex-info{flex:1}
+.ex-name{font-weight:800;font-size:15px;color:#fff}
+.ex-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.ex-sets{display:flex;gap:6px;align-items:center}
+.set-badge{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--text);
+}
+.ex-arrow{color:var(--muted);font-size:12px;transition:transform .2s;flex-shrink:0}
+.ex-card.expanded .ex-arrow{transform:rotate(180deg)}
+
+/* EXPAND BODY */
+.ex-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border)}
+.ex-card.expanded .ex-body{display:block;animation:fadeUp .25s ease}
+.ex-desc{font-size:13px;color:#8fa3c0;line-height:1.7;margin-bottom:14px;margin-top:12px}
+.ex-steps{list-style:none}
+.ex-steps li{
+  display:flex;gap:10px;margin-bottom:10px;font-size:13px;color:#c5d4e8;line-height:1.5;
+}
+.ex-steps li::before{
+  content:attr(data-n);width:22px;height:22px;border-radius:50%;
+  background:var(--green);color:#000;font-weight:900;font-size:11px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.tips-box{
+  background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);
+  border-radius:10px;padding:12px;margin-top:12px;
+}
+.tips-box p{font-size:12px;color:#c084fc;line-height:1.6}
+
+/* REST DAY */
+.rest-card{
+  background:linear-gradient(135deg,var(--card),#0d1a2a);
+  border:1px dashed var(--border);border-radius:20px;
+  padding:40px 20px;text-align:center;
+}
+.rest-icon{font-size:60px;margin-bottom:16px}
+.rest-card h2{font-size:22px;font-weight:900;color:#4a5568;margin-bottom:8px}
+.rest-card p{color:#374151;font-size:13px;line-height:1.7}
+.rest-tips{margin-top:20px;display:flex;flex-direction:column;gap:8px;text-align:right}
+.rest-tip-item{
+  background:rgba(255,255,255,.02);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;font-size:12px;color:#4b5563;
+  display:flex;gap:10px;align-items:center;
+}
+
+/* NUTRITION TAB */
+.macro-ring-wrap{display:flex;justify-content:center;margin-bottom:20px;position:relative}
+.macro-ring-wrap svg{transform:rotate(-90deg)}
+.macro-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.macro-label .kcal{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)}
+.macro-label .kcal-lbl{font-size:10px;color:var(--muted)}
+.macro-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
+.macro-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
+.macro-num{font-family:'Bebas Neue',sans-serif;font-size:26px}
+.macro-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+.meal-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px;margin-bottom:10px;
+}
+.meal-time{font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px}
+.meal-name{font-size:15px;font-weight:800;color:#fff;margin-bottom:4px}
+.meal-items{font-size:12px;color:var(--muted);line-height:1.6}
+.meal-kcal{float:left;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--orange)}
+
+/* PROGRESS TAB */
+.progress-section{margin-bottom:24px}
+.progress-section h3{font-size:14px;font-weight:700;color:var(--green);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px}
+.prog-bar-wrap{margin-bottom:10px}
+.prog-bar-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.prog-bar-bg{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.prog-bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.bmi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:16px;
+}
+.bmi-row{display:flex;gap:10px;margin-bottom:14px}
+.bmi-input-wrap{flex:1}
+.bmi-input-wrap label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+.bmi-input{
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;
+  font-family:'Cairo',sans-serif;outline:none;transition:border-color .2s;
+}
+.bmi-input:focus{border-color:var(--green)}
+.bmi-btn{
+  width:100%;background:var(--green);color:#000;border:none;border-radius:10px;
+  padding:12px;font-weight:900;font-size:14px;cursor:pointer;font-family:'Cairo',sans-serif;
+  margin-top:10px;transition:all .2s;
+}
+.bmi-btn:hover{opacity:.9;transform:translateY(-1px)}
+#bmi-result{margin-top:14px;display:none}
+.bmi-num{font-family:'Bebas Neue',sans-serif;font-size:48px;text-align:center}
+.bmi-cat{text-align:center;font-size:14px;font-weight:700;margin-top:4px}
+
+/* TIPS / INFO CARDS */
+.info-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;
+}
+.info-icon{font-size:24px;flex-shrink:0;margin-top:2px}
+.info-title{font-weight:700;font-size:14px;color:#fff;margin-bottom:4px}
+.info-body{font-size:12px;color:var(--muted);line-height:1.7}
+
+/* SECTION TITLE */
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;
+  color:var(--green);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* FOOTER */
+footer{text-align:center;padding:24px 16px 40px;color:var(--muted);font-size:11px;
+  border-top:1px solid var(--border);margin-top:20px;position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="app-badge">💪 BODY TRANSFORMATION</div>
+  <h1>تحول الجسم</h1>
+  <p>إنقاص الوزن + بناء العضلات — برنامج 12 أسبوع</p>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-num">7</div><div class="stat-lbl">أيام/أسبوع</div></div>
+  <div class="stat-item"><div class="stat-num">5</div><div class="stat-lbl">تمرين</div></div>
+  <div class="stat-item"><div class="stat-num">2</div><div class="stat-lbl">راحة</div></div>
+  <div class="stat-item"><div class="stat-num">12</div><div class="stat-lbl">أسبوع</div></div>
+</div>
+
+<!-- WEEK DAYS -->
+<div class="week-nav" id="weekNav"></div>
+
+<!-- TABS -->
+<div id="tabs">
+  <button class="tab-btn active" onclick="setTab('schedule')">📅<br>الجدول</button>
+  <button class="tab-btn" onclick="setTab('nutrition')">🥗<br>التغذية</button>
+  <button class="tab-btn" onclick="setTab('progress')">📊<br>التقدم</button>
+  <button class="tab-btn" onclick="setTab('tips')">💡<br>نصائح</button>
+</div>
+
+<div id="content"></div>
+<footer>💪 الاتساق هو المفتاح — لا يوم بلا حركة</footer>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════
+const DAYS = [
+  {
+    name:"الأحد", short:"أحد", type:"صدر + ثلاثية", color:"#00ff87", isRest:false,
+    muscles:["الصدر","الثلاثية","الكتف الأمامي"],
+    burnKcal:420, exercises:9,
+    workout:[
+      {name:"بنش برس بالبار", cat:"قوة", sets:"4×8", rest:"90ث", color:"#00ff87",
+       desc:"الملك — يستهدف الصدر الكبير والثلاثية والكتف",
+       steps:["استلقِ على المقعد، القدمان ثابتتان على الأرض","الإمساك بالبار أعرض من الكتفين قليلاً","انزل البار ببطء حتى يلمس الصدر","ادفع بقوة للأعلى مع الزفير"],
+       tip:"احرص على ثبات الكتفين — لا ترفعهما أثناء الضغط"},
+      {name:"بنش برس مائل بالدمبل", cat:"قوة", sets:"3×10", rest:"75ث", color:"#00ff87",
+       desc:"يستهدف الصدر العلوي لمنحه الامتلاء",
+       steps:["ميّل المقعد 30-45 درجة","الدمبل عند مستوى الكتف","ادفع للأعلى مع تقريب الدمبلين","عد ببطء 3 ثوانٍ للنزول"],
+       tip:"الزاوية 30° أفضل من 45° — تحمي الكتف وتركز على الصدر العلوي"},
+      {name:"فلاي على المقعد المسطح", cat:"عزل", sets:"3×12", rest:"60ث", color:"#00ff87",
+       desc:"عزل الصدر وتمديده لبناء العرض",
+       steps:["الدمبل فوق الصدر مباشرة","افتح الذراعين ببطء مع انحناء طفيف بالكوع","اشعر بالتمدد في الصدر","عد بالقوس العكسي"],
+       tip:"الوزن ليس المهم هنا — المهم الشعور بعضلة الصدر"},
+      {name:"ضغط الكابل العلوي", cat:"عزل", sets:"3×15", rest:"45ث", color:"#00ff87",
+       desc:"يستهدف الصدر السفلي ويعطيه التعريف",
+       steps:["الكابل من أعلى","الانحناء الخفيف للأمام","اسحب للأسفل وقرّب اليدين","ثبّت ثانية في القمة"],
+       tip:"ابقَ منتصباً — لا تنحنِ للأمام كثيراً"},
+      {name:"ضغط كوبر (Dips)", cat:"مركب", sets:"3×12", rest:"75ث", color:"#00ff87",
+       desc:"يستهدف الثلاثية والصدر السفلي",
+       steps:["الجذع مائل للأمام لتركيز الصدر","انزل حتى تتعامد الذراع مع الأرض","ادفع بالثلاثية والصدر معاً","لا تنزل أكثر من اللازم"],
+       tip:"الميل للأمام = صدر. الجذع عمودي = ثلاثية"},
+      {name:"تمديد الثلاثية بالحبل", cat:"عزل", sets:"3×15", rest:"45ث", color:"#00c8ff",
+       desc:"عزل الثلاثية وبناء التعريف الخلفي للذراع",
+       steps:["الكابل من أعلى — الحبل (rope)","الكوعان ثابتان جانب الجسم","اضغط للأسفل حتى تستقيم الذراع","ارجع ببطء"],
+       tip:"الكوعان لا يتحركان — فقط المرفقان"},
+      {name:"تمديد الثلاثية بالدمبل فوق الرأس", cat:"عزل", sets:"3×12", rest:"60ث", color:"#00c8ff",
+       desc:"يمدد الثلاثية الطويلة بالكامل",
+       steps:["دمبل واحد بكلتا اليدين فوق الرأس","انزل خلف الرأس ببطء","ارفع بالثلاثية فقط","الرأس ثابتة — لا تتحرك"],
+       tip:"هذا التمرين يمدد الرأس الطويل للثلاثية — مهم جداً"},
+      {name:"بنش ضيق بالبار", cat:"قوة", sets:"3×10", rest:"75ث", color:"#00c8ff",
+       desc:"مركب قوة للثلاثية مع دعم الصدر",
+       steps:["الإمساك بعرض الكتفين بالضبط","انزل البار لمنتصف الصدر","الكوعان قريبان من الجسم","ادفع بقوة"],
+       tip:"لا تضيّق كثيراً — يؤذي الرسغ. الكتفان عرض الكتف أفضل"},
+      {name:"تمرين الضغط (Push-up) — إحماء ختامي", cat:"تعمير", sets:"2×حتى الإجهاد", rest:"60ث", color:"#00ff87",
+       desc:"ختم التمرين بعمل قلبي عضلي",
+       steps:["ضغط عادي — وضعية اللوح","20 تكرار عادي","ثم 10 تكرار ضيق","ثم 10 تكرار واسع"],
+       tip:"هذا ليس راحة — هو pump نهائي لحرق السكر المتبقي"},
+    ]
+  },
+  {
+    name:"الاثنين", short:"اثنين", type:"ظهر + ثنائية", color:"#00c8ff", isRest:false,
+    muscles:["الظهر العريض","الرومبويد","الثنائية","الساعد"],
+    burnKcal:450, exercises:9,
+    workout:[
+      {name:"سحب بار (Deadlift)", cat:"قوة", sets:"4×6", rest:"120ث", color:"#00c8ff",
+       desc:"ملك التمارين — يبني كامل سلسلة العضلات الخلفية",
+       steps:["القدمان بعرض الوركين","الإمساك خارج الركبتين","الظهر مستقيم — الصدر للأمام","ادفع الأرض بقدميك والبار للأعلى معاً"],
+       tip:"ابدأ بوزن خفيف حتى تتقن الحركة — هذا التمرين خطير بشكل خاطئ"},
+      {name:"سحب بار عمودي (Barbell Row)", cat:"قوة", sets:"4×8", rest:"90ث", color:"#00c8ff",
+       desc:"يستهدف الظهر العريض وعضلات الوسط",
+       steps:["الانحناء 45 درجة للأمام","الإمساك أوسع من الكتفين","اسحب البار نحو السرة","الكتفان تتقارب في القمة"],
+       tip:"اشعر بالظهر — ليس الذراعين"},
+      {name:"سحب بالتعليق (Pull-up)", cat:"قوة", sets:"4×8", rest:"90ث", color:"#00c8ff",
+       desc:"أفضل تمرين للظهر العريض — يعطي الشكل V",
+       steps:["الإمساك أوسع من الكتفين","ابدأ من الوضعية الكاملة المفردة","اسحب حتى يصل الذقن للبار","انزل ببطء 3 ثوانٍ"],
+       tip:"لو ما تقدر — استخدم الـ assisted machine أو الـ resistance band"},
+      {name:"سحب أمامي (Lat Pulldown)", cat:"قوة", sets:"3×12", rest:"75ث", color:"#00c8ff",
+       desc:"بديل الـ pull-up — يبني عرض الظهر",
+       steps:["اجلس مع ثبات الفخذين","الإمساك بعرض مناسب","اسحب للذقن — ليس للصدر","عد ببطء وامتد كاملاً"],
+       tip:"الامتداد الكامل في الأعلى يضاعف المكسب"},
+      {name:"سحب جانبي للكابل", cat:"عزل", sets:"3×12", rest:"60ث", color:"#00c8ff",
+       desc:"يستهدف الظهر العريض بزاوية مختلفة",
+       steps:["الكابل على ارتفاع الرأس","اسحب جانباً بزاوية 45 درجة","الكتف يتحرك للأسفل والخلف","عد ببطء"],
+       tip:"تخيل أنك تضع الكوع في جيبك الخلفي"},
+      {name:"كيبل فيس بول", cat:"عزل", sets:"3×15", rest:"45ث", color:"#00c8ff",
+       desc:"صحة الكتف والظهر الأوسط — ضروري للتوازن",
+       steps:["الكابل أمامك على ارتفاع العين","اسحب باصبعك نحو وجهك","الكوعان يتسعان للجانب","ثبت ثانية وعد"],
+       tip:"يحمي مفصل الكتف — لا تتجاهله أبداً"},
+      {name:"كيرل بالبار", cat:"قوة", sets:"4×10", rest:"75ث", color:"#ff8c00",
+       desc:"بناء كتلة الثنائية بشكل فعال",
+       steps:["الوقوف المستقيم — الكوعان ثابتان","ارفع البار نحو الكتفين","لا تتأرجح للخلف","انزل ببطء 3 ثوانٍ"],
+       tip:"الهبوط البطيء يبني العضلة أكثر من الرفع"},
+      {name:"كيرل مطرقة (Hammer Curl)", cat:"قوة", sets:"3×12", rest:"60ث", color:"#ff8c00",
+       desc:"يبني الثنائية الطويلة والساعد",
+       steps:["الدمبل بالقبضة المحايدة (الإبهام للأعلى)","ارفع بدون تدوير الرسغ","كلا الذراعين معاً أو بالتناوب","الكوع ثابت"],
+       tip:"يعطي سماكة الذراع التي يفتقدها الكيرل العادي"},
+      {name:"كيرل التركيز (Concentration Curl)", cat:"عزل", sets:"3×15", rest:"45ث", color:"#ff8c00",
+       desc:"ذروة الثنائية وعزلها بالكامل",
+       steps:["الجلوس — الكوع على الفخذ الداخلي","ارفع ببطء إلى الكتف","دوّر الرسغ قليلاً في القمة","انزل ببطء مع التمديد الكامل"],
+       tip:"أرنولد قال هذا تمرينه المفضل لبناء ذروة الثنائية"},
+    ]
+  },
+  {
+    name:"الثلاثاء", short:"ثلاثاء", type:"أرجل + أكتاف", color:"#ff3d5a", isRest:false,
+    muscles:["الرباعية","الواجهات","الأكتاف","الساق"],
+    burnKcal:520, exercises:10,
+    workout:[
+      {name:"السكوات بالبار", cat:"قوة", sets:"4×8", rest:"120ث", color:"#ff3d5a",
+       desc:"ملكة تمارين الأرجل — يحرق الدهون ويبني الكتلة",
+       steps:["البار على الكتفين — ليس الرقبة","القدمان بعرض الكتفين + ميل للخارج","انزل كأنك تجلس على كرسي","الركبة تتجاوز أصابع القدم قليلاً — طبيعي"],
+       tip:"الظهر المستقيم أهم من العمق — لا تنحنِ للأمام"},
+      {name:"ليغ برس", cat:"قوة", sets:"4×10", rest:"90ث", color:"#ff3d5a",
+       desc:"حمل أثقال للرجل مع حماية الظهر",
+       steps:["القدمان بعرض متوسط في المنتصف","انزل حتى زاوية 90 درجة","ادفع ببطء — لا تقفل الركبة","تنفس صحيح — زفير عند الدفع"],
+       tip:"القدمان للأعلى = واجهات. للأسفل = رباعية"},
+      {name:"لانجز (Lunges) بالدمبل", cat:"مركب", sets:"3×12", rest:"75ث", color:"#ff3d5a",
+       desc:"يبني الأرجل ويحسن التوازن والتنسيق",
+       steps:["خطوة للأمام — الركبة الخلفية للأرض","الجذع مستقيم طوال الوقت","ادفع بالقدم الأمامية للرجوع","تناوب الأرجل"],
+       tip:"ممتاز لحرق الدهون لأنه يستخدم عضلات متعددة معاً"},
+      {name:"رومانيان ديدليفت", cat:"قوة", sets:"3×10", rest:"90ث", color:"#ff3d5a",
+       desc:"الواجهات وعضلات الظهر السفلي",
+       steps:["الدمبل أو البار أمام الجسم","انحنِ للأمام مع ظهر مستقيم","الشعور بالشد في الواجهات","ارجع بدفع الوركين للأمام"],
+       tip:"الحركة من الورك — ليس من الظهر"},
+      {name:"ساق رأسية (Calf Raise)", cat:"عزل", sets:"4×20", rest:"45ث", color:"#ff3d5a",
+       desc:"بناء عجل الساق للجمالية والقوة",
+       steps:["الوقوف على حافة درجة","ارفع على أصابع القدم كاملاً","ثبت ثانية في القمة","انزل ببطء تحت مستوى الأرض"],
+       tip:"20 تكرار بطيء أفضل من 50 سريع"},
+      {name:"ضغط الأكتاف بالدمبل", cat:"قوة", sets:"4×10", rest:"90ث", color:"#a855f7",
+       desc:"بناء حجم الأكتاف من كل الاتجاهات",
+       steps:["الدمبل على مستوى الكتف","ادفع للأعلى مباشرة — لا تقوّس الظهر","ثبت ثانية في القمة","عد ببطء"],
+       tip:"الجلوس على مقعد يمنع الغش ويركز على الكتف"},
+      {name:"رفع جانبي (Lateral Raise)", cat:"عزل", sets:"4×15", rest:"60ث", color:"#a855f7",
+       desc:"يعطي الكتف العريض المطلوب",
+       steps:["الدمبل جانب الجسم","ارفع الذراعين جانباً حتى مستوى الكتف","الكوع منحنٍ طفيفاً — ليس مستقيماً","عد ببطء 3 ثوانٍ"],
+       tip:"الأهم: الهبوط البطيء. لا ترمي الوزن"},
+      {name:"رفع أمامي (Front Raise)", cat:"عزل", sets:"3×12", rest:"60ث", color:"#a855f7",
+       desc:"الكتف الأمامي والإمتلاء العلوي",
+       steps:["الدمبل أمام الفخذين","ارفع ذراعاً واحدة للأمام حتى مستوى الكتف","بالتناوب بين الذراعين","انزل ببطء"],
+       tip:"لا ترفع أعلى من الكتف — يؤذي الأكروميون"},
+      {name:"فيس بول عند الكابل", cat:"عزل", sets:"3×15", rest:"45ث", color:"#a855f7",
+       desc:"الكتف الخلفي — يعطي العمق والتعريف",
+       steps:["الكابل على ارتفاع الوجه","اسحب نحو وجهك — الكوعان يتسعان","الأصابع تصل قرب الأذنين","ثبت ثانية"],
+       tip:"الكتف الخلفي مهمل في معظم البرامج — هذا يصلحه"},
+      {name:"شراج (Shrugs)", cat:"عزل", sets:"3×15", rest:"60ث", color:"#a855f7",
+       desc:"بناء الترابيزيوس وعنق الرياضي",
+       steps:["الدمبل جانب الجسم","ارفع الكتفين للأعلى فقط — لا تدويرهما","ثبت ثانية في القمة","انزل ببطء"],
+       tip:"اشعر بضغط الترابيزيوس في القمة — وليس الرقبة"},
+    ]
+  },
+  {
+    name:"الأربعاء", short:"أربعاء", type:"راحة نشطة", color:"#4a5568", isRest:true,
+    muscles:[], burnKcal:150, exercises:0, workout:[]
+  },
+  {
+    name:"الخميس", short:"خميس", type:"صدر + ظهر", color:"#00ff87", isRest:false,
+    muscles:["الصدر الكامل","الظهر العريض","العضلة الكبيرة المدورة"],
+    burnKcal:480, exercises:8,
+    workout:[
+      {name:"ضغط بالدمبل المسطح", cat:"قوة", sets:"4×10", rest:"90ث", color:"#00ff87",
+       desc:"بناء كتلة الصدر مع نطاق حركة أوسع من البار",
+       steps:["الدمبل بجانبي الصدر","الضغط للأعلى مع تقريبهما في القمة","الكتف منخفضة — ليست مرفوعة","عد ببطء 3 ثوانٍ"],
+       tip:"الدمبل يسمح بنطاق حركة أكبر من البار — استغله"},
+      {name:"بنش مائل بالبار", cat:"قوة", sets:"4×8", rest:"90ث", color:"#00ff87",
+       desc:"الصدر العلوي — يعطي الامتلاء الأعلى",
+       steps:["ميّل 30 درجة","الإمساك أوسع من الكتفين","انزل حتى الصدر العلوي","ادفع بقوة مع ضغط الصدر"],
+       tip:"يوم الخميس ركز على الصدر العلوي أكثر من الأحد"},
+      {name:"كابل كروس أوفر", cat:"عزل", sets:"3×15", rest:"60ث", color:"#00ff87",
+       desc:"تعريف وضخ الدم في الصدر",
+       steps:["كابلان من أعلى في الجانبين","انحنِ للأمام قليلاً","اجمع الكابلين أمامك بقوس","ثبت ثانية واشعر بالصدر"],
+       tip:"هذا مثالي لنهاية التمرين — يملأ العضلة بالدم"},
+      {name:"بوليد أوفر", cat:"مركب", sets:"3×12", rest:"75ث", color:"#00ff87",
+       desc:"يوسع القفص الصدري ويمدد الصدر والظهر",
+       steps:["الاستلقاء عرضياً على المقعد","دمبل واحد فوق الصدر","اخفضه خلف الرأس ببطء — مع الشعور بالتمدد","ارجع بقوة"],
+       tip:"يعمل على الصدر والمنشار الأمامي والظهر معاً"},
+      {name:"سحب بمقبض ضيق (Close Grip Row)", cat:"قوة", sets:"4×10", rest:"90ث", color:"#00c8ff",
+       desc:"الظهر الأوسط والرومبويد والعضلة المدورة",
+       steps:["الكابل أو البار على مستوى البطن","الإمساك بمقبض ضيق","اسحب نحو السرة","الكتفان تتقارب كاملاً"],
+       tip:"ضيّق الإمساك = تركيز على الظهر الأوسط"},
+      {name:"سحب أفقي للكابل", cat:"عزل", sets:"3×12", rest:"60ث", color:"#00c8ff",
+       desc:"الظهر العريض والمدور الكبير",
+       steps:["الكابل على ارتفاع الصدر","اسحب للخلف مع إدارة الكوع للأسفل","الكتف تتحرك للخلف والأسفل","امتد كاملاً"],
+       tip:"تخيل أنك تحاول وضع الكوع في حزامك الخلفي"},
+      {name:"هايبر اكستنشن", cat:"مركب", sets:"3×15", rest:"60ث", color:"#00c8ff",
+       desc:"يقوي أسفل الظهر والواجهات وعضلات الردف",
+       steps:["الجلوس على الجهاز أو على الكرة","الانحناء للأمام مع ظهر مستقيم","ارفع الجذع للخلف بعضلات الظهر","الحركة بطيئة دائماً"],
+       tip:"هذا التمرين يحمي الظهر من الإصابات — لا تتجاهله"},
+      {name:"سحب شريط المقاومة", cat:"تعمير", sets:"2×20", rest:"45ث", color:"#00c8ff",
+       desc:"ختم التمرين وحماية الكتف",
+       steps:["شريط المقاومة أمامك","اسحب بكلتا اليدين حتى الصدر","الكوعان يتسعان للجانب","عد ببطء"],
+       tip:"يعزز استقرار الكتف ويمنع الإصابات المزمنة"},
+    ]
+  },
+  {
+    name:"الجمعة", short:"جمعة", type:"أرجل + بطن", color:"#ff8c00", isRest:false,
+    muscles:["الرباعية","الواجهات","البطن","الكور"],
+    burnKcal:500, exercises:9,
+    workout:[
+      {name:"سكوات الكيس (Goblet Squat)", cat:"قوة", sets:"4×12", rest:"90ث", color:"#ff8c00",
+       desc:"سكوات أعمق وأأمن للركبة",
+       steps:["دمبل ثقيل أمام الصدر","القدمان أوسع قليلاً من الكتفين","انزل عميقاً — المرفقان بين الركبتين","الكعب لا يرتفع"],
+       tip:"العمق أهم من الوزن — الأثقل ليس الأفضل هنا"},
+      {name:"بلغاريان سكوات", cat:"قوة", sets:"3×10", rest:"90ث", color:"#ff8c00",
+       desc:"يصحح عدم التوازن بين الأرجل",
+       steps:["الرجل الخلفية على المقعد","انزل بالرجل الأمامية كلانجز","الجذع مستقيم","عد بالرجل الأمامية"],
+       tip:"مؤلم ولكنه فعال جداً للواجهات"},
+      {name:"ليغ اكستنشن", cat:"عزل", sets:"3×15", rest:"60ث", color:"#ff8c00",
+       desc:"عزل الرباعية الأمامية وبناء تعريفها",
+       steps:["الجلوس على الجهاز","ارفع القدمين حتى الاستقامة الكاملة","ثبت ثانية في القمة","انزل ببطء"],
+       tip:"لا تضرب الوزن — الحركة سلسة دائماً"},
+      {name:"ليغ كيرل", cat:"عزل", sets:"3×15", rest:"60ث", color:"#ff8c00",
+       desc:"عزل الواجهات الخلفية",
+       steps:["الاستلقاء على الجهاز","اثنِ الركبة بالكامل","ثبت ثانية — الكعب نحو الردف","عد ببطء 3 ثوانٍ"],
+       tip:"انقباض الواجهات في القمة أهم من الوزن"},
+      {name:"سوماتي (Sumo Squat)", cat:"مركب", sets:"3×12", rest:"75ث", color:"#ff8c00",
+       desc:"يستهدف الداخل والردف",
+       steps:["القدمان أوسع كثيراً — الأصابع للخارج","انزل مع بقاء الظهر مستقيماً","الركبتان تتجهان نفس اتجاه الأصابع","ادفع بالكعبين للرجوع"],
+       tip:"ممتاز للنساء والرجال لشكل الجسم الكامل"},
+      {name:"كرنش عادي", cat:"بطن", sets:"4×20", rest:"45ث", color:"#a855f7",
+       desc:"الجزء العلوي من البطن",
+       steps:["الاستلقاء — الركبتان مثنيتان","اليدان خلف الرأس خفيفاً — ليس شداً","ارفع الكتفين فقط — ليس الظهر كاملاً","ثبت ثانية وعد"],
+       tip:"الجودة أهم من الكمية — 20 بشكل صحيح أفضل من 100 خاطئ"},
+      {name:"ليغ ريز (Leg Raise)", cat:"بطن", sets:"4×15", rest:"45ث", color:"#a855f7",
+       desc:"الجزء السفلي من البطن — الأصعب",
+       steps:["الاستلقاء — اليدان تحت الأرداف","ارفع الأرجل المستقيمة حتى 90 درجة","انزل ببطء — لا تلمس الأرض","ظهرك مضغوط على الأرض دائماً"],
+       tip:"هذا الجزء يحتاج أسابيع لتشعر بالنتيجة — استمر"},
+      {name:"بلانك", cat:"بطن", sets:"3×60ث", rest:"30ث", color:"#a855f7",
+       desc:"الكور الكامل — الجسر الثابت",
+       steps:["الاتكاء على المرفقين وأصابع القدم","الجسم خط مستقيم كامل","البطن مضغوطة للأعلى","التنفس منتظم"],
+       tip:"دقيقة بلانك يومياً تغير شكل الجسم خلال 8 أسابيع"},
+      {name:"روسيان تويست", cat:"بطن", sets:"3×20", rest:"45ث", color:"#a855f7",
+       desc:"الجانبين والعضلة المائلة",
+       steps:["الجلوس بزاوية 45 درجة — الأرجل مرفوعة","دوّر الجذع يميناً ويساراً","الحركة بطيئة ومتحكم بها","أمسك دمبلاً لزيادة الصعوبة"],
+       tip:"يعطي تعريف الجانبين الذي يبحث عنه الجميع"},
+    ]
+  },
+  {
+    name:"السبت", short:"سبت", type:"راحة تامة", color:"#4a5568", isRest:true,
+    muscles:[], burnKcal:0, exercises:0, workout:[]
+  }
+];
+
+const NUTRITION = {
+  kcal:2000, protein:160, carbs:200, fat:60,
+  meals:[
+    {time:"7:00 صباحاً", name:"إفطار البطل", items:"شوفان + موز + بيض مسلوق (3) + قهوة بدون سكر", kcal:480},
+    {time:"10:00 صباحاً", name:"وجبة ما قبل التمرين", items:"صدر دجاج + أرز بني + خضار", kcal:420},
+    {time:"1:00 ظهراً", name:"ما بعد التمرين (مهم)", items:"بروتين ويي + موزة + لبن قليل الدسم", kcal:300},
+    {time:"3:00 عصراً", name:"غداء البناء", items:"سمك أو دجاج + بطاطا حلوة + سلطة", kcal:480},
+    {time:"6:00 مساءً", name:"وجبة خفيفة", items:"مكسرات + تفاحة + جبن قريش", kcal:200},
+    {time:"9:00 مساءً", name:"عشاء الليل", items:"بيض + سبانخ + أفوكادو + خبز أسمر", kcal:320},
+  ]
+};
+
+const TIPS = [
+  {icon:"💧",title:"ماء كافٍ",body:"اشرب 3-4 لتر يومياً. الجفاف الخفيف يقلل الأداء 20% ويوقف حرق الدهون"},
+  {icon:"😴",title:"النوم ملك",body:"7-9 ساعات. 80% من هرمون النمو يُفرز أثناء النوم — بدونه لا عضلات"},
+  {icon:"⏱️",title:"قاعدة التدريب المتقطع",body:"30 دقيقة كارديو بعد رفع الأثقال مباشرة = حرق دهون ضعف الكمية"},
+  {icon:"🥩",title:"البروتين أولاً",body:"1.6-2 جرام لكل كيلو من وزنك. بدون بروتين كافٍ لا يوجد بناء عضلي حقيقي"},
+  {icon:"📈",title:"التدريج الزائد",body:"زد الوزن أو التكرارات كل أسبوعين. عضلتك لا تنمو إلا إذا شعرت بتحدٍ جديد"},
+  {icon:"🔥",title:"حرق الدهون + بناء العضل",body:"هذا ممكن في أول 6 أشهر للمبتدئ (body recomposition). الأكل المنضبط هو المفتاح"},
+  {icon:"🧘",title:"الإحماء واجب",body:"10 دقائق إحماء قبل كل تمرين تقلل خطر الإصابة 60% وترفع الأداء 15%"},
+  {icon:"📅",title:"الاتساق فوق كل شيء",body:"تمرين متوسط 5 أيام أسبوعياً يتفوق على تمرين مثالي مرة في الأسبوع"},
+];
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let curDay = new Date().getDay(); // 0=Sun
+let curTab = 'schedule';
+let expandedEx = null;
+
+// ══════════════════════════════════════════════════════
+// INIT WEEK NAV
+// ══════════════════════════════════════════════════════
+function initWeekNav(){
+  const nav = document.getElementById('weekNav');
+  nav.innerHTML = DAYS.map((d,i)=>`
+    <div class="day-pill ${i===curDay?'active':''} ${d.isRest?'rest':''}" onclick="setDay(${i})">
+      <div class="day-name">${d.short}</div>
+      <div class="day-type" style="font-size:8px">${d.isRest?'🛌 راحة':'💪 تمرين'}</div>
+    </div>
+  `).join('');
+}
+
+function setDay(i){
+  curDay=i; expandedEx=null;
+  document.querySelectorAll('.day-pill').forEach((p,j)=>{
+    p.classList.toggle('active',j===i);
+  });
+  if(curTab==='schedule') render();
+}
+
+// ══════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════
+function setTab(t){
+  curTab=t; expandedEx=null;
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>{
+    const tabs=['schedule','nutrition','progress','tips'];
+    b.classList.toggle('active',tabs[j]===t);
+  });
+  render();
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
+function render(){
+  const el=document.getElementById('content');
+  el.style.animation='none'; void el.offsetWidth; el.style.animation='fadeUp .35s ease';
+  if(curTab==='schedule') el.innerHTML=renderSchedule();
+  else if(curTab==='nutrition') el.innerHTML=renderNutrition();
+  else if(curTab==='progress') el.innerHTML=renderProgress();
+  else if(curTab==='tips') el.innerHTML=renderTips();
+}
+
+// ══════════════════════════════════════════════════════
+// SCHEDULE
+// ══════════════════════════════════════════════════════
+function renderSchedule(){
+  const d = DAYS[curDay];
+  if(d.isRest) return renderRestDay(d);
+
+  const colorMap={'قوة':d.color,'عزل':'#a855f7','مركب':'#ff8c00','عزل':d.color,'تعمير':'#4a5568','بطن':'#a855f7'};
+  let exHTML = d.workout.map((ex,i)=>{
+    const c = ex.color || d.color;
+    return `
+    <div class="ex-card ${expandedEx===i?'expanded':''}" id="ex-${i}" onclick="toggleEx(${i})">
+      <div class="ex-header">
+        <div class="ex-num" style="background:${c}">${i+1}</div>
+        <div class="ex-info">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-sub" style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <span style="color:${c};font-weight:700;font-size:11px">${ex.cat}</span>
+            <span style="color:#2d3748">•</span>
+            <span class="set-badge">${ex.sets}</span>
+            <span class="set-badge">راحة: ${ex.rest}</span>
+          </div>
+        </div>
+        <div class="ex-arrow">▼</div>
+      </div>
+      <div class="ex-body">
+        <p class="ex-desc">${ex.desc}</p>
+        <ul class="ex-steps">
+          ${ex.steps.map((s,si)=>`<li data-n="${si+1}">${s}</li>`).join('')}
+        </ul>
+        <div class="tips-box">
+          <p>💡 <strong>نصيحة المدرب:</strong> ${ex.tip}</p>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const muscleTags = d.muscles.map(m=>`<span class="muscle-tag">${m}</span>`).join('');
+  return `
+    <div class="day-hero fade">
+      <div class="day-hero-top">
+        <div>
+          <div style="font-size:11px;color:${d.color};font-weight:700;margin-bottom:4px">${d.name}</div>
+          <div class="day-title" style="color:#fff">${d.type}</div>
+        </div>
+        <div class="day-badge" style="background:${d.color}18;color:${d.color};border:1px solid ${d.color}30">
+          ${d.exercises} تمرين
+        </div>
+      </div>
+      <div class="day-muscles">${muscleTags}</div>
+      <div class="day-stats">
+        <div class="d-stat">
+          <div class="d-stat-n" style="color:${d.color}">${d.burnKcal}</div>
+          <div class="d-stat-l">سعرة محروقة</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-stat-n" style="color:${d.color}">${d.exercises}</div>
+          <div class="d-stat-l">تمرين</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-stat-n" style="color:${d.color}">~75</div>
+          <div class="d-stat-l">دقيقة</div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-title">التمارين</div>
+    ${exHTML}`;
+}
+
+function toggleEx(i){
+  expandedEx = expandedEx===i ? null : i;
+  render();
+}
+
+function renderRestDay(d){
+  return `
+    <div class="rest-card fade">
+      <div class="rest-icon">${d.type==='راحة تامة'?'🛌':'🚶'}</div>
+      <h2>${d.type}</h2>
+      <p style="color:#4b5563">${d.type==='راحة تامة'?'استرح بالكامل اليوم. جسمك يبني العضلات أثناء الراحة — ليس أثناء التمرين':'حركة خفيفة فقط. راحة نشطة أفضل من الخمول التام'}</p>
+      <div class="rest-tips">
+        <div class="rest-tip-item">🚶 مشي 20-30 دقيقة خفيفة</div>
+        <div class="rest-tip-item">🧘 تمدد وإطالة العضلات</div>
+        <div class="rest-tip-item">💧 اشرب الماء بكمية أكبر</div>
+        <div class="rest-tip-item">😴 نم ساعة إضافية</div>
+        <div class="rest-tip-item">🥗 حافظ على التغذية — لا تبالغ في الأكل</div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// NUTRITION
+// ══════════════════════════════════════════════════════
+function renderNutrition(){
+  const meals = NUTRITION.meals.map(m=>`
+    <div class="meal-card fade">
+      <div class="meal-time">${m.time}</div>
+      <div class="meal-name">${m.name} <span class="meal-kcal">${m.kcal}</span></div>
+      <div class="meal-items">${m.items}</div>
+    </div>`).join('');
+
+  return `
+    <div class="sec-title">الماكروز اليومية</div>
+    <div class="macro-grid">
+      <div class="macro-card fade">
+        <div class="macro-num" style="color:#00ff87">${NUTRITION.protein}g</div>
+        <div class="macro-lbl">بروتين</div>
+      </div>
+      <div class="macro-card fade">
+        <div class="macro-num" style="color:#00c8ff">${NUTRITION.carbs}g</div>
+        <div class="macro-lbl">كربوهيدرات</div>
+      </div>
+      <div class="macro-card fade">
+        <div class="macro-num" style="color:#ff8c00">${NUTRITION.fat}g</div>
+        <div class="macro-lbl">دهون</div>
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;text-align:center">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green)">${NUTRITION.kcal}</div>
+      <div style="font-size:11px;color:var(--muted)">سعرة حرارية يومياً (هدف إعادة التركيب)</div>
+    </div>
+    <div class="sec-title">خطة الوجبات</div>
+    ${meals}
+    <div class="info-card fade" style="margin-top:8px">
+      <div class="info-icon">⚠️</div>
+      <div>
+        <div class="info-title">ملاحظة مهمة</div>
+        <div class="info-body">هذه الأرقام تقريبية لشخص 75-80 كيلو. عدّل الكميات حسب وزنك الحالي وهدفك. استشر أخصائي تغذية للخطة المخصصة.</div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// PROGRESS
+// ══════════════════════════════════════════════════════
+function renderProgress(){
+  const bars=[
+    {name:"الصدر",pct:72,color:"#00ff87"},
+    {name:"الظهر",pct:65,color:"#00c8ff"},
+    {name:"الأرجل",pct:58,color:"#ff3d5a"},
+    {name:"الأكتاف",pct:70,color:"#a855f7"},
+    {name:"الذراعين",pct:80,color:"#ff8c00"},
+    {name:"البطن",pct:45,color:"#ffd700"},
+  ];
+  const barsHTML = bars.map(b=>`
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-top">
+        <span style="color:#c5d4e8;font-size:13px;font-weight:600">${b.name}</span>
+        <span style="color:${b.color};font-weight:700">${b.pct}%</span>
+      </div>
+      <div class="prog-bar-bg">
+        <div class="prog-bar-fill" style="width:${b.pct}%;background:linear-gradient(90deg,${b.color}80,${b.color})"></div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="bmi-card fade">
+      <div style="font-weight:700;font-size:15px;color:#fff;margin-bottom:14px">🧮 حاسبة BMI</div>
+      <div class="bmi-row">
+        <div class="bmi-input-wrap">
+          <label>الطول (سم)</label>
+          <input class="bmi-input" id="height" type="number" placeholder="175" />
+        </div>
+        <div class="bmi-input-wrap">
+          <label>الوزن (كجم)</label>
+          <input class="bmi-input" id="weight" type="number" placeholder="80" />
+        </div>
+      </div>
+      <button class="bmi-btn" onclick="calcBMI()">احسب BMI</button>
+      <div id="bmi-result">
+        <div class="bmi-num" id="bmi-num"></div>
+        <div class="bmi-cat" id="bmi-cat"></div>
+        <div id="bmi-advice" style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6"></div>
+      </div>
+    </div>
+    <div class="sec-title">مستوى التدريب</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+      ${barsHTML}
+    </div>
+    <div class="info-card fade">
+      <div class="info-icon">📅</div>
+      <div>
+        <div class="info-title">الجدول الزمني للنتائج</div>
+        <div class="info-body">
+          <strong style="color:var(--green)">أسبوع 1-2:</strong> تحسن الأداء والقوة<br>
+          <strong style="color:var(--blue)">أسبوع 3-4:</strong> بداية تغير الشكل<br>
+          <strong style="color:var(--orange)">أسبوع 6-8:</strong> فرق واضح في المرآة<br>
+          <strong style="color:var(--purple)">أسبوع 10-12:</strong> تحول حقيقي
+        </div>
+      </div>
+    </div>`;
+}
+
+function calcBMI(){
+  const h=parseFloat(document.getElementById('height').value);
+  const w=parseFloat(document.getElementById('weight').value);
+  if(!h||!w||h<100||w<30)return;
+  const bmi=(w/((h/100)**2)).toFixed(1);
+  const res=document.getElementById('bmi-result');
+  const num=document.getElementById('bmi-num');
+  const cat=document.getElementById('bmi-cat');
+  const adv=document.getElementById('bmi-advice');
+  num.textContent=bmi;
+  let color,label,advice;
+  if(bmi<18.5){color='#00c8ff';label='نقص في الوزن';advice='ركز على زيادة السعرات والبروتين مع التمارين لبناء الكتلة العضلية';}
+  else if(bmi<25){color='#00ff87';label='وزن مثالي ✓';advice='ممتاز! ركز على بناء العضلات مع الحفاظ على نسبة الدهون الحالية';}
+  else if(bmi<30){color='#ff8c00';label='زيادة في الوزن';advice='خفض 500 سعرة يومياً + هذا البرنامج سيعطيك نتائج ممتازة خلال 12 أسبوع';}
+  else{color='#ff3d5a';label='سمنة';advice='ابدأ بكارديو يومي + تمارين المقاومة + استشر طبيباً. أنت في المكان الصحيح!';}
+  num.style.color=color; cat.style.color=color; cat.textContent=label; adv.textContent=advice;
+  res.style.display='block'; res.style.animation='countUp .4s ease';
+}
+
+// ══════════════════════════════════════════════════════
+// TIPS
+// ══════════════════════════════════════════════════════
+function renderTips(){
+  return `
+    <div class="sec-title">نصائح الاحتراف</div>
+    ${TIPS.map((t,i)=>`
+      <div class="info-card fade" style="animation-delay:${i*.06}s">
+        <div class="info-icon">${t.icon}</div>
+        <div>
+          <div class="info-title">${t.title}</div>
+          <div class="info-body">${t.body}</div>
+        </div>
+      </div>`).join('')}`;
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+initWeekNav();
+render();
+</script>
+</body>
+</html>
